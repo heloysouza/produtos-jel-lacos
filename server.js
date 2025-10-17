@@ -16,6 +16,16 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "12mb" }));
 
+
+const corsOptions = {
+  origin: ["https://jellacosemimos.netlify.app", "https://www.jellacosemimos.netlify.app"], // seu frontend
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
+
 // conexão com o banco de dados
 connectDB();
 
