@@ -183,6 +183,7 @@ productForm.addEventListener("submit", async (e) => {
       });
       if (!res.ok) throw new Error("Falha ao atualizar produto");
     } else {
+
       // criar
       const res = await fetch("/api/produtos", {
         method: "POST",
@@ -193,7 +194,7 @@ productForm.addEventListener("submit", async (e) => {
         body: JSON.stringify(payload)
       });
       if (!res.ok) {
-        const err = await res.json().catch(()=>({message:"Erro"}));
+        const err = await res.json().catch(() => ({ message: "Erro" }));
         throw new Error(err.message || "Falha ao criar produto");
       }
     }
@@ -236,7 +237,7 @@ async function loadProducts() {
 
 // -------------------
 // Remover produto (API)
- // -------------------
+// -------------------
 async function removeProduct(id) {
   if (!confirm("Deseja realmente remover este produto?")) return;
   try {
@@ -245,7 +246,7 @@ async function removeProduct(id) {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) {
-      const body = await res.json().catch(()=>({message:"Erro"}));
+      const body = await res.json().catch(() => ({ message: "Erro" }));
       throw new Error(body.message || "Falha ao remover");
     }
     await loadProducts();
@@ -270,7 +271,7 @@ function loadProductToForm(p) {
 
 // -------------------
 // Preview de imagens (selecionadas ou base64 existentes)
- // -------------------
+// -------------------
 imageInput.addEventListener("change", async () => {
   const files = Array.from(imageInput.files);
   // mantemos selectedImages como já base64s + novos arquivos temporários
@@ -332,7 +333,7 @@ function renderImagePreview() {
 
 // -------------------
 // Formatação de moeda (exibição)
- // -------------------
+// -------------------
 function formatarMoeda(valor) {
   if (valor == null || isNaN(valor)) return "R$ 0,00";
   return Number(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -355,7 +356,7 @@ filterCategory.addEventListener("change", () => {
 
 // -------------------
 // Autenticação (login modal)
- // -------------------
+// -------------------
 btnLogin.addEventListener("click", () => {
   loginModal.style.display = "flex";
   loginError.style.display = "none";
