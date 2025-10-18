@@ -18,7 +18,7 @@ app.use(express.json({ limit: "25mb" }));
 
 
 const corsOptions = {
-  origin: ["https://jellacosemimos.netlify.app", "https://produtos-jel-lacos.onrender.com"], // seu frontend
+  origin: ["https://produtos-jel-lacos.onrender.com"], // seu frontend
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };

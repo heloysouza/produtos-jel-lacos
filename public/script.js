@@ -1,4 +1,6 @@
+// -------------------
 // Seletores principais
+// -------------------
 const productForm = document.getElementById("productForm");
 const productsRoot = document.getElementById("productsRoot");
 const resetBtn = document.getElementById("resetBtn");
@@ -19,17 +21,22 @@ const loginUser = document.getElementById("loginUser");
 const loginPass = document.getElementById("loginPass");
 const loginError = document.getElementById("loginError");
 
+// -------------------
 // Config
-const API_BASE = "https://produtos-jel-lacos.onrender.com"; // mesma origem (servidor serve os arquivos estáticos)
+// -------------------
+const API_BASE = "https://produtos-jel-lacos.onrender.com";
 let token = localStorage.getItem("jwt_token") || null;
-let loggedUser = token ? "Administrador" : null;
 
-// Estado local temporário
-let products = []; // carregados do servidor
+// -------------------
+// Estado local
+// -------------------
+let products = [];
 let selectedImages = [];
 let editingId = null;
 
+// -------------------
 // Atualiza UI de login
+// -------------------
 function updateAuthUI() {
   if (token) {
     userLabel.textContent = "Usuário: Administrador";
@@ -48,12 +55,8 @@ updateAuthUI();
 // -------------------
 priceInput.addEventListener("input", () => {
   let value = priceInput.value.replace(/\D/g, "");
-  if (value === "") {
-    priceInput.value = "";
-    return;
-  }
-  value = (Number(value) / 100).toFixed(2) + "";
-  value = value.replace(".", ",");
+  if (!value) return priceInput.value = "";
+  value = (Number(value) / 100).toFixed(2).replace(".", ",");
   value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   priceInput.value = `R$ ${value}`;
 });
@@ -65,9 +68,17 @@ function toBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = (err) => reject(err);
+    reader.onerror = err => reject(err);
     reader.readAsDataURL(file);
   });
+}
+
+// -------------------
+// Formatação de moeda (exibição)
+// -------------------
+function formatarMoeda(valor) {
+  if (valor == null || isNaN(valor)) return "R$ 0,00";
+  return Number(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 // -------------------
@@ -75,12 +86,12 @@ function toBase64(file) {
 // -------------------
 function renderProducts(list = products) {
   productsRoot.innerHTML = "";
-  if (!list || list.length === 0) {
+  if (!list.length) {
     productsRoot.innerHTML = `<div class="empty">Nenhum produto cadastrado ainda.</div>`;
     return;
   }
 
-  list.forEach((p) => {
+  list.forEach(p => {
     const card = document.createElement("div");
     card.className = "product-card";
 
@@ -109,7 +120,6 @@ function renderProducts(list = products) {
       </div>
     `;
 
-    // Ações só habilitadas se token existir
     const editBtn = card.querySelector(".edit");
     const delBtn = card.querySelector(".delete");
 
@@ -119,8 +129,7 @@ function renderProducts(list = products) {
     } else {
       editBtn.disabled = true;
       delBtn.disabled = true;
-      editBtn.title = "Faça login para editar";
-      delBtn.title = "Faça login para remover";
+      editBtn.title = delBtn.title = "Faça login para editar/remover";
     }
 
     // Carrossel
@@ -143,68 +152,62 @@ function renderProducts(list = products) {
 }
 
 // -------------------
-// Form submit -> criar/editar via API
+// Carregar produtos
 // -------------------
-productForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
+async function loadProducts() {
+  try {
+    const res = await fetch(`${API_BASE}/api/produtos`);
+    products = await res.json();
+    renderProducts(products);
+  } catch (err) {
+    console.error("Erro ao carregar produtos:", err);
+    productsRoot.innerHTML = `<div class="empty">Erro ao carregar produtos.</div>`;
+  }
+}
 
+// -------------------
+// Criar / Editar produto
+// -------------------
+productForm.addEventListener("submit", async e => {
+  e.preventDefault();
   if (!token) return alert("Faça login como administrador para salvar produtos.");
 
   const id = document.getElementById("productId").value;
   const title = document.getElementById("title").value.trim();
-  const priceStr = document.getElementById("price").value
-    .replace(/[R$\.\s]/g, "")
-    .replace(",", ".");
-  const price = parseFloat(priceStr);
-
+  const price = parseFloat(
+    document.getElementById("price").value.replace(/[R$\.\s]/g, "").replace(",", ".")
+  );
   const category = document.getElementById("category").value;
   const desc = document.getElementById("desc").value;
-  const imageFiles = document.getElementById("image").files;
+  const imageFiles = Array.from(imageInput.files);
 
-  // converte imagens
-  const imageUrls = [...selectedImages]; // imagens que já estavam selecionadas
-  for (let f of imageFiles) {
-    const base64 = await toBase64(f);
-    imageUrls.push(base64);
-  }
+  const imageUrls = [...selectedImages];
+  for (let f of imageFiles) imageUrls.push(await toBase64(f));
 
   const payload = { title, price, category, desc, images: imageUrls };
 
   try {
-    if (id) {
-      // editar
-      const res = await fetch(`/api/produtos/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error("Falha ao atualizar produto");
-    } else {
+    let url = `${API_BASE}/api/produtos`;
+    let method = "POST";
+    if (id) { url += `/${id}`; method = "PUT"; }
 
-      // criar
-      const res = await fetch("/api/produtos", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Erro" }));
-        throw new Error(err.message || "Falha ao criar produto");
-      }
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ message: "Erro" }));
+      throw new Error(body.message || "Falha na operação");
     }
 
-    await loadProducts(); // recarrega lista
     productForm.reset();
     selectedImages = [];
     renderImagePreview();
     document.getElementById("productId").value = "";
     editingId = null;
+    await loadProducts();
   } catch (err) {
     alert(err.message || "Erro desconhecido");
   }
@@ -222,28 +225,14 @@ resetBtn.addEventListener("click", () => {
 });
 
 // -------------------
-// Carregar produtos do servidor
-// -------------------
-async function loadProducts() {
-  try {
-    const res = await fetch("/api/produtos");
-    products = await res.json();
-    renderProducts(products);
-  } catch (err) {
-    console.error("Erro ao carregar produtos:", err);
-    productsRoot.innerHTML = `<div class="empty">Erro ao carregar produtos.</div>`;
-  }
-}
-
-// -------------------
-// Remover produto (API)
+// Remover produto
 // -------------------
 async function removeProduct(id) {
   if (!confirm("Deseja realmente remover este produto?")) return;
   try {
-    const res = await fetch(`/api/produtos/${id}`, {
+    const res = await fetch(`${API_BASE}/api/produtos/${id}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({ message: "Erro" }));
@@ -256,7 +245,7 @@ async function removeProduct(id) {
 }
 
 // -------------------
-// Carregar produto no formulário para editar
+// Carregar produto para edição
 // -------------------
 function loadProductToForm(p) {
   editingId = p._id;
@@ -270,22 +259,17 @@ function loadProductToForm(p) {
 }
 
 // -------------------
-// Preview de imagens (selecionadas ou base64 existentes)
+// Preview de imagens
 // -------------------
 imageInput.addEventListener("change", async () => {
   const files = Array.from(imageInput.files);
-  // mantemos selectedImages como já base64s + novos arquivos temporários
-  // novos arquivos só serão convertidos no submit; aqui convertemos pra preview
-  for (let f of files) {
-    const b = await toBase64(f);
-    selectedImages.push(b);
-  }
+  for (let f of files) selectedImages.push(await toBase64(f));
   renderImagePreview();
 });
 
 function renderImagePreview() {
   imagePreview.innerHTML = "";
-  if (!selectedImages || selectedImages.length === 0) {
+  if (!selectedImages.length) {
     imagePreview.textContent = "Nenhuma imagem selecionada";
     return;
   }
@@ -332,14 +316,6 @@ function renderImagePreview() {
 }
 
 // -------------------
-// Formatação de moeda (exibição)
-// -------------------
-function formatarMoeda(valor) {
-  if (valor == null || isNaN(valor)) return "R$ 0,00";
-  return Number(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
-// -------------------
 // Busca e filtro
 // -------------------
 searchInput.addEventListener("input", () => {
@@ -355,7 +331,7 @@ filterCategory.addEventListener("change", () => {
 });
 
 // -------------------
-// Autenticação (login modal)
+// Login e Logout
 // -------------------
 btnLogin.addEventListener("click", () => {
   loginModal.style.display = "flex";
@@ -376,11 +352,12 @@ loginSubmit.addEventListener("click", async () => {
     loginError.style.display = "block";
     return;
   }
+
   try {
-    const res = await fetch("/api/admin/login", {
+    const res = await fetch(`${API_BASE}/api/admin/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
     });
     const body = await res.json();
     if (!res.ok) {
@@ -388,6 +365,7 @@ loginSubmit.addEventListener("click", async () => {
       loginError.style.display = "block";
       return;
     }
+
     token = body.token;
     localStorage.setItem("jwt_token", token);
     loginModal.style.display = "none";
@@ -401,7 +379,6 @@ loginSubmit.addEventListener("click", async () => {
   }
 });
 
-// Logout
 btnLogout.addEventListener("click", () => {
   token = null;
   localStorage.removeItem("jwt_token");
