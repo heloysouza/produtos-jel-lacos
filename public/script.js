@@ -20,7 +20,7 @@ const loginPass = document.getElementById("loginPass");
 const loginError = document.getElementById("loginError");
 
 // Config
-const API_BASE = ""; // mesma origem (servidor serve os arquivos estáticos)
+const API_BASE = "https://produtos-jel-lacos.onrender.com"; // mesma origem (servidor serve os arquivos estáticos)
 let token = localStorage.getItem("jwt_token") || null;
 let loggedUser = token ? "Administrador" : null;
 
