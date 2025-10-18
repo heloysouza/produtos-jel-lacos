@@ -14,11 +14,11 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "12mb" }));
+app.use(express.json({ limit: "25mb" }));
 
 
 const corsOptions = {
-  origin: ["https://jellacosemimos.netlify.app", "https://www.jellacosemimos.netlify.app"], // seu frontend
+  origin: ["https://jellacosemimos.netlify.app", "https://produtos-jel-lacos.onrender.com"], // seu frontend
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };
